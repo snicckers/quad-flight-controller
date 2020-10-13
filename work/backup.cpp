@@ -21,15 +21,13 @@ long int a_read_index = 0;
 long int a_read_total[3] = {0, 0, 0};
 long int a_read_ave[3] = {0, 0, 0};
 
-/*--- MPU Globals ------------------------------------------------------------*/
-int sensor_data[7];
-
 /*--- IMU Globals ------------------------------------------------------------*/
 float rad_to_degrees = 57.29577951f;
 float degrees_to_rad = 0.017453293f;
 double lsb_coefficient; // see datasheet
-float roll, pitch, yaw;
+int sensor_data[7];
 long g_drift[3];
+float roll, pitch, yaw;
 float q_0 = 1.0f;
 float q_1 = 0.0f;
 float q_2 = 0.0f;

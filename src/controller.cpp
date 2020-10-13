@@ -44,14 +44,21 @@ float k_i = 0.01f; //1.82
 float k_d = 0.70f;  //1.04
 float desired_angle = 0.0;
 
-/*--- Remote Control Globals -------------------------------------------------*/
-byte last_channel_1, last_channel_2, last_channel_3, last_channel_4;
-int receiver_input_channel_1, receiver_input_channel_2, receiver_input_channel_3, receiver_input_channel_4;
-unsigned long timer_1, timer_2, timer_3, timer_4;
+// Radio Reciever Pins:
+const int rec_input_1_pin = 22;
+const int rec_input_2_pin = 23;
+const int rec_input_3_pin = 24;
+const int rec_input_4_pin = 25;
+
+// Radio Reciever
+volatile int rec_input_ch_1, rec_input_ch_1_timer, rec_last_ch_1;
+volatile int rec_input_ch_2, rec_input_ch_2_timer, rec_last_ch_2;
+volatile int rec_input_ch_3, rec_input_ch_3_timer, rec_last_ch_3;
+volatile int rec_input_ch_4, rec_input_ch_4_timer, rec_last_ch_4;
 
 /*--- Debugging --------------------------------------------------------------*/
 void debugging(){
-  int mode = 2;
+  int mode = 5;
 
   // Serial Print has a significant impact on performance. Only use it once every n scans.
   if (elapsed_time - last_time_print > 20000){
@@ -121,6 +128,17 @@ void debugging(){
       Serial.print(" - Pitch: ");
       Serial.print(yaw);
 
+      Serial.print("\n");
+    }
+
+    if(mode == 5){
+      Serial.print(rec_input_ch_1);
+      Serial.print(" ");
+      Serial.print(rec_input_ch_2);
+      Serial.print(" ");
+      Serial.print(rec_input_ch_3);
+      Serial.print(" ");
+      Serial.print(rec_input_ch_4);
       Serial.print("\n");
     }
 
@@ -339,8 +357,6 @@ void calibrate_imu(){
 }
 
 /*--- CONTROLLER -------------------------------------------------------------*/
-
-/*--- FLIGHT CONTROLLER ------------------------------------------------------*/
 void flight_controller(){
   error = desired_angle - pitch;
 
@@ -393,10 +409,65 @@ void flight_controller(){
   previous_pitch = pitch;
 }
 
-void change_setpoint(){
-  if (receiver_input_channel_1 != 0){
-    desired_angle = map(receiver_input_channel_1, 1000, 2000, -30, 30);
+// void change_setpoint(){
+//   if (receiver_input_channel_1 != 0){
+//     desired_angle = map(receiver_input_channel_1, 1000, 2000, -30, 30);
+//   }
+// }
+
+/*--- ISRs -------------------------------------------------------------------*/
+void radio_reciever_input() {
+  // Channel 1: Roll
+  if (rec_last_ch_1 == 0 && digitalRead(rec_input_1_pin)){
+    rec_last_ch_1 = 1;
+    rec_input_ch_1_timer = micros();
   }
+  else if (rec_last_ch_1 == 1 && !digitalRead(rec_input_1_pin)){
+    rec_last_ch_1 = 0;
+    rec_input_ch_1 = micros() - rec_input_ch_1_timer;
+  }
+
+  // Channel 2: Pitch
+  if (rec_last_ch_2 == 0 && digitalRead(rec_input_2_pin)){
+    rec_last_ch_2 = 1;
+    rec_input_ch_2_timer = micros();
+  }
+  else if (rec_last_ch_2 == 1 && !digitalRead(rec_input_2_pin)){
+    rec_last_ch_2 = 0;
+    rec_input_ch_2 = micros() - rec_input_ch_2_timer;
+  }
+
+  // Channel 3: Throttle
+  if (rec_last_ch_3 == 0 && digitalRead(rec_input_3_pin)){
+    rec_last_ch_3 = 1;
+    rec_input_ch_3_timer = micros();
+  }
+  else if (rec_last_ch_3 == 1 && !digitalRead(rec_input_3_pin)){
+    rec_last_ch_3 = 0;
+    rec_input_ch_3 = micros() - rec_input_ch_3_timer;
+  }
+
+  // Channel 4: Yaw
+  if (rec_last_ch_4 == 0 && digitalRead(rec_input_4_pin)){
+    rec_last_ch_4 = 1;
+    rec_input_ch_4_timer = micros();
+  }
+  else if (rec_last_ch_4 == 1 && !digitalRead(rec_input_4_pin)){
+    rec_last_ch_4 = 0;
+    rec_input_ch_4 = micros() - rec_input_ch_4_timer;
+  }
+
+}
+
+void radio_setup(){
+  pinMode(rec_input_1_pin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(rec_input_1_pin), radio_reciever_input, CHANGE);
+  pinMode(rec_input_2_pin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(rec_input_2_pin), radio_reciever_input, CHANGE);
+  pinMode(rec_input_3_pin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(rec_input_3_pin), radio_reciever_input, CHANGE);
+  pinMode(rec_input_4_pin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(rec_input_4_pin), radio_reciever_input, CHANGE);
 }
 
 /*--- SETUP ------------------------------------------------------------------*/
@@ -404,6 +475,7 @@ void setup() {
   pinMode(7, INPUT);
   Serial.begin(9600);
   Wire.begin();
+  radio_setup();
   setup_mpu();
   calibrate_imu();
 }
@@ -423,5 +495,10 @@ void loop(){
   debugging();
 
   // REFRESH RATE
-  while (micros() - elapsed_time < 6000){};
+  int scan_time = micros() - elapsed_time;
+  while (scan_time < 3800){};
+  // if (scan_time > 3850){
+  //   Serial.print("\n ------- ERROR: SCAN TIME EXCEEDED ------- \n");
+  //   while (1);
+  // }
 }
