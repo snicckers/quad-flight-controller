@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <stdlib.h>
+#include <Servo.h>
 
 #define ACTIVATED HIGH
 unsigned long elapsed_time;
@@ -36,7 +37,7 @@ float q_2 = 0.0f;
 float q_3 = 0.0f;
 float correction_gain = 0.1f;
 
-/*--- PID Globals ------------------------------------------------------------*/
+/*--- Controller Globals -----------------------------------------------------*/
 float pid_roll, pid_pitch;
 float pwm_1, pwm_2, pwm_3, pwm_4;
 float error_roll, error_pitch;
@@ -66,6 +67,13 @@ volatile int rec_input_ch_1, rec_input_ch_1_timer, rec_last_ch_1;
 volatile int rec_input_ch_2, rec_input_ch_2_timer, rec_last_ch_2;
 volatile int rec_input_ch_3, rec_input_ch_3_timer, rec_last_ch_3;
 volatile int rec_input_ch_4, rec_input_ch_4_timer, rec_last_ch_4;
+
+/*--- Motors -----------------------------------------------------------------*/
+Servo motor_fl, motor_fr, motor_rl, motor_rr; // 1, 2, 3, 4
+int motor_fl_out = 2; // front left
+int motor_fr_out = 3; // front right
+int motor_rl_out = 4; // read left
+int motor_rr_out = 5; // read right
 
 /*--- Debugging --------------------------------------------------------------*/
 void debugging(){
@@ -444,6 +452,8 @@ void flight_controller(){
   error_roll_previous = error_roll;
   roll_previous = roll;
 
+  // Write to motors
+
 }
 
 /*--- ISRs -------------------------------------------------------------------*/
@@ -501,11 +511,24 @@ void radio_setup(){
   attachInterrupt(digitalPinToInterrupt(rec_input_4_pin), radio_reciever_input, CHANGE);
 }
 
+void setup_motors(){
+  motor_fl.attach(motor_fl_out);
+  motor_fr.attach(motor_fr_out);
+  motor_rl.attach(motor_rl_out);
+  motor_rr.attach(motor_rr_out);
+
+  motor_fl.write(1000);
+  motor_fr.write(1000);
+  motor_rl.write(1000);
+  motor_rr.write(1000);
+}
+
 /*--- SETUP ------------------------------------------------------------------*/
 void setup() {
   pinMode(7, INPUT);
   Serial.begin(9600);
   Wire.begin();
+  setup_motors();
   radio_setup();
   setup_mpu();
   calibrate_imu();
