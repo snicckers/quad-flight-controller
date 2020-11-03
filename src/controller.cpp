@@ -70,10 +70,10 @@ volatile int rec_input_ch_4, rec_input_ch_4_timer, rec_last_ch_4;
 
 /*--- Motors -----------------------------------------------------------------*/
 Servo motor_fl, motor_fr, motor_rl, motor_rr; // 1, 2, 3, 4
-int motor_fl_out = 2; // front left
-int motor_fr_out = 3; // front right
-int motor_rl_out = 4; // read left
-int motor_rr_out = 5; // read right
+int motor_fr_out = 2; // front right
+int motor_fl_out = 3; // front light
+int motor_rr_out = 4; // read right
+int motor_rl_out = 5; // read left
 
 /*--- Debugging --------------------------------------------------------------*/
 void debugging(){
