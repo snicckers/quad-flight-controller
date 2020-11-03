@@ -1,6 +1,21 @@
+// // Main (setup & loop)
+// void setup() {
+//   Serial.begin(9600);
+//   motor_1.attach(motor_1_out);
+//   motor_1.write(1010);
+// }
+//
+// void loop(){
+//   motor_1.write(1200);
+// }
+
 #include <Wire.h>
 #include <stdlib.h>
 #include <arduino.h>
+#include <Servo.h>
+
+Servo motor_1;
+const int motor_1_out = 2;
 
 // Radio Reciever Pins:
 const int rec_input_1_pin = 22;
@@ -69,6 +84,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(rec_input_3_pin), radio_reciever_input, CHANGE);
   pinMode(rec_input_4_pin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(rec_input_4_pin), radio_reciever_input, CHANGE);
+
+  motor_1.attach(motor_1_out);
+  motor_1.write(1010);
 }
 
 void loop(){
@@ -81,4 +99,12 @@ void loop(){
   Serial.print(rec_input_ch_4);
   Serial.print("\n");
   //digitalWrite(ledpin, state);
+
+  int command = rec_input_ch_3;
+
+  if (command <= 1050) command = 1050;
+  if (command >= 1800) command = 1800;
+
+  motor_1.write(command);
+
 }

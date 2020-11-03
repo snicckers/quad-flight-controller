@@ -7,7 +7,7 @@ float sample_time;
 unsigned long last_time_print;
 /*--- Propeller Servos -------------------------------------------------------*/
 
-double throttle = 1100;
+double throttle = 1500;
 int button_state = 0;
 int previous_time_pressed;
 bool start_motors = false;
@@ -37,14 +37,25 @@ float q_3 = 0.0f;
 float correction_gain = 0.1f;
 
 /*--- PID Globals ------------------------------------------------------------*/
-float pid, pwm_right, pwm_left, error, previous_error, previous_pitch;
-float pid_p = 0, pid_i = 0, pid_d = 0;
-float k_p = 3.78f; //1.4
-float k_i = 0.01f; //1.82
-float k_d = 0.70f;  //1.04
-float desired_angle = 0.0;
+float pid_roll, pid_pitch;
+float pwm_1, pwm_2, pwm_3, pwm_4;
+float error_roll, error_pitch;
+float error_roll_previous, error_pitch_previous;
+float roll_previous, pitch_previous;
 
-// Radio Reciever Pins:
+float roll_pid_p = 0, roll_pid_i = 0, roll_pid_d = 0;
+float roll_k_p = 3.78f;
+float roll_k_i = 0.01f;
+float roll_k_d = 0.70f;
+
+float pitch_pid_p = 0, pitch_pid_i = 0, pitch_pid_d = 0;
+float pitch_k_p = 3.78f;
+float pitch_k_i = 0.01f;
+float pitch_k_d = 0.70f;
+
+float desired_roll = 0.0f, desired_pitch = 0.0f;
+
+/*--- Radio Globals ----------------------------------------------------------*/
 const int rec_input_1_pin = 22;
 const int rec_input_2_pin = 23;
 const int rec_input_3_pin = 24;
@@ -58,7 +69,7 @@ volatile int rec_input_ch_4, rec_input_ch_4_timer, rec_last_ch_4;
 
 /*--- Debugging --------------------------------------------------------------*/
 void debugging(){
-  int mode = 5;
+  int mode = 1;
 
   // Serial Print has a significant impact on performance. Only use it once every n scans.
   if (elapsed_time - last_time_print > 20000){
@@ -69,27 +80,17 @@ void debugging(){
       Serial.print(" - Pitch: ");
       Serial.print(pitch);
 
-      Serial.print(" - Pitch: ");
-      Serial.print(yaw);
+      Serial.print(" - pwm 1: ");
+      Serial.print(pwm_1);
 
-      Serial.print(" - pwm left: ");
-      Serial.print(pwm_left);
+      Serial.print(" - pwm 2: ");
+      Serial.print(pwm_2);
 
-      Serial.print(" - pwm right: ");
-      Serial.print(pwm_right);
+      Serial.print(" - pwm 3: ");
+      Serial.print(pwm_3);
 
-      Serial.print(" - PID: ");
-      Serial.print(pid);
-
-      Serial.print(" - Run Motors?: ");
-      Serial.print(start_motors);
-
-      Serial.print(" - k_p: ");
-      Serial.print(k_p);
-      Serial.print(" - k_i: ");
-      Serial.print(k_i);
-      Serial.print(" - k_d: ");
-      Serial.print(k_d);
+      Serial.print(" - pwm 4: ");
+      Serial.print(pwm_4);
 
       Serial.print("\n");
     }
@@ -222,9 +223,15 @@ void accel_data_processing(){  //Simple moving average filter
 
 // Remove the average gyroscope drift / offset (recorded in the calibration method) from the gyroscope data that is recorded during each scan.
 void gyro_data_processing(){
+  // Remove drift from Gyroscope data:
   (sensor_data)[4] -= g_drift[0];
   (sensor_data)[5] -= g_drift[1];
   (sensor_data)[6] -= g_drift[2];
+
+  // Gyroscope Temperature Offset Calibation
+  float mpu_t = ((float)sensor_data[3] + 12421.0f) / 340.0f;
+  float lsb_scale_offset = 0.328 * (mpu_t - 25.0f);
+  lsb_coefficient = (1.0f / (32.8f - lsb_scale_offset));
 }
 
 /*--- CALCULATE ATTITUDE -----------------------------------------------------*/
@@ -257,10 +264,6 @@ void calculate_attitude(){
   float a_z = a_read_ave[2];
   normalize = invSqrt(a_x*a_x + a_y*a_y + a_z*a_z);
   a_x *= normalize; a_y *= normalize; a_z *= normalize;
-
-  float mpu_t = ((float)sensor_data[3] + 12421.0f) / 340.0f;
-  float lsb_scale_offset = 0.328 * (mpu_t - 25.0f);
-  lsb_coefficient = (1.0f / (32.8f - lsb_scale_offset));
 
   float g_x = sensor_data[4] * (lsb_coefficient) * (1.0) * degrees_to_rad;
   float g_y = sensor_data[5] * (lsb_coefficient) * (1.0) * degrees_to_rad;
@@ -358,62 +361,90 @@ void calibrate_imu(){
 
 /*--- CONTROLLER -------------------------------------------------------------*/
 void flight_controller(){
-  error = desired_angle - pitch;
 
-  // PROPORTIONAL COMPONENET
-  pid_p = k_p * error;
+  //----------------------------------------------------------- PITCH CONTROLLER
+  error_pitch = desired_pitch - pitch;
 
-  // INTEGRAL COMPONENT
-  int k_i_thresh = 8;
-  if (error < k_i_thresh && error > -k_i_thresh) {
-    pid_i = pid_i * (k_i * error);
+  // Proportional:
+  pitch_pid_p = pitch_k_p * error_pitch;
+
+  // Integral:
+  int thresh = 8;
+  if (error_pitch < thresh && error_pitch > -thresh) {
+    pitch_pid_i = pitch_pid_i * (pitch_k_i * error_pitch);
   }
-  if (error > k_i_thresh && error < -k_i_thresh){
-    pid_i = 0;
+  if (error_pitch > thresh && error_pitch < -thresh){
+    pitch_pid_i = 0;
   }
 
-  /* DERIVATIVE COMPONENT*/
+  // Derivative:
   // Take the derivative of the process variable (ROLL) instead of the error
   // Taking derivative of the error results in "Derivative Kick".
   // https://www.youtube.com/watch?v=KErYuh4VDtI
-  pid_d = (-1.0f) * k_d * ((pitch - previous_pitch) / sample_time);
+  pitch_pid_d = (-1.0f) * pitch_k_d * ((pitch - pitch_previous) / sample_time);
 
-  // pid_d = k_d * ((error - previous_error) / sample_time);
-  /* Sum the the components to find the total pid value. */
-  pid = pid_p + pid_i + pid_d;
+  // Altogether:
+  pid_pitch = pitch_pid_p + pitch_pid_i + pitch_pid_d;
 
   /* Clamp the maximum & minimum pid values*/
-  if (pid < -1000) pid = -1000;
-  if (pid > 1000) pid = 1000;
+  if (pid_pitch < -1000) pid_pitch = -1000;
+  if (pid_pitch > 1000) pid_pitch = 1000;
 
-  /* Calculate PWM width. */
-  pwm_right = throttle - pid;
-  pwm_left = throttle + pid;
+  //------------------------------------------------------------ ROLL CONTROLLER
+  error_roll = desired_roll - roll;
 
-  /* clamp PWM values. */
-  //----------Right---------//
-  if (pwm_right < 1000) pwm_right = 1000;
-  if (pwm_right > 2000) pwm_right = 2000;
+  // Proportional:
+  roll_pid_p = roll_k_p * error_roll;
 
-  //----------Left---------//
-  if (pwm_left < 1000) pwm_left = 1000;
-  if (pwm_left > 2000) pwm_left = 2000;
-
-  if (start_motors == true){
-    // MOTORS ON
-  } else{
-    // MOTORS OFF
+  // Integral:
+  //thresh = 8;
+  if (error_roll < thresh && error_roll > -thresh) {
+    roll_pid_i = roll_pid_i * (roll_k_i * error_roll);
+  }
+  if (error_roll > thresh && error_roll < -thresh){
+    roll_pid_i = 0;
   }
 
-  previous_error = error;
-  previous_pitch = pitch;
-}
+  // Derivative:
+  // Take the derivative of the process variable (ROLL) instead of the error
+  // Taking derivative of the error results in "Derivative Kick".
+  // https://www.youtube.com/watch?v=KErYuh4VDtI
+  roll_pid_d = (-1.0f) * roll_k_d * ((roll - roll_previous) / sample_time);
 
-// void change_setpoint(){
-//   if (receiver_input_channel_1 != 0){
-//     desired_angle = map(receiver_input_channel_1, 1000, 2000, -30, 30);
-//   }
-// }
+  // Altogether:
+  pid_roll = roll_pid_p + roll_pid_i + roll_pid_d;
+
+  /* Clamp the maximum & minimum pid values*/
+  if (pid_roll < -1000) pid_roll = -1000;
+  if (pid_roll > 1000) pid_roll = 1000;
+
+  //----------------------------------------------------- MOTOR MIXING ALGORITHM
+
+  pwm_1 = throttle + pid_pitch + pid_roll; // Front Right
+  pwm_2 = throttle - pid_pitch + pid_roll; // Front Left
+  pwm_3 = throttle + pid_pitch - pid_roll; // Rear Right
+  pwm_4 = throttle - pid_pitch - pid_roll; // Rear Left
+
+  // Clamp PWM Values:
+  if (pwm_1 >= 1850) pwm_1 = 1850;
+  if (pwm_1 <= 1050) pwm_1 = 1050;
+
+  if (pwm_2 >= 1850) pwm_2 = 1850;
+  if (pwm_2 <= 1050) pwm_2 = 1050;
+
+  if (pwm_3 >= 1850) pwm_3 = 1850;
+  if (pwm_3 <= 1050) pwm_3 = 1050;
+
+  if (pwm_4 >= 1850) pwm_4 = 1850;
+  if (pwm_4 <= 1050) pwm_4 = 1050;
+
+  // Set values for next cycle:
+  error_pitch_previous = error_pitch;
+  pitch_previous = pitch;
+  error_roll_previous = error_roll;
+  roll_previous = roll;
+
+}
 
 /*--- ISRs -------------------------------------------------------------------*/
 void radio_reciever_input() {
@@ -490,13 +521,14 @@ void loop(){
   gyro_data_processing();
   accel_data_processing();
   calculate_attitude();
+  flight_controller();
 
   // DEBUGGING
   debugging();
 
   // REFRESH RATE
-  int scan_time = micros() - elapsed_time;
-  while (scan_time < 3800){};
+  //int scan_time = micros() - elapsed_time;
+  while (micros() - elapsed_time < 6000){};
   // if (scan_time > 3850){
   //   Serial.print("\n ------- ERROR: SCAN TIME EXCEEDED ------- \n");
   //   while (1);
