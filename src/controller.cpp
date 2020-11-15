@@ -428,10 +428,10 @@ void flight_controller(){
 
   //----------------------------------------------------- MOTOR MIXING ALGORITHM
 
-  pwm_1 = throttle + pid_pitch + pid_roll; // Front Right
+  pwm_1 = throttle + pid_pitch + pid_roll; // Rear :eft
   pwm_2 = throttle - pid_pitch + pid_roll; // Front Left
   pwm_3 = throttle + pid_pitch - pid_roll; // Rear Right
-  pwm_4 = throttle - pid_pitch - pid_roll; // Rear Left
+  pwm_4 = throttle - pid_pitch - pid_roll; // Front Right
 
   // Clamp PWM Values:
   if (pwm_1 >= 1850) pwm_1 = 1850;
@@ -551,7 +551,7 @@ void loop(){
 
   // REFRESH RATE
   //int scan_time = micros() - elapsed_time;
-  while (micros() - elapsed_time < 6000){};
+  while (micros() - elapsed_time < 4000){};
   // if (scan_time > 3850){
   //   Serial.print("\n ------- ERROR: SCAN TIME EXCEEDED ------- \n");
   //   while (1);
