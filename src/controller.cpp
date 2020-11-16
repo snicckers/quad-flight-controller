@@ -59,7 +59,7 @@ float desired_roll = 0.0f, desired_pitch = 0.0f;
 /*--- Radio Globals ----------------------------------------------------------*/
 const int rec_input_1_pin = 22;
 const int rec_input_2_pin = 23;
-const int rec_input_3_pin = 24;
+const int rec_input_3_pin = 24; // throttle
 const int rec_input_4_pin = 25;
 
 // Radio Reciever
@@ -88,17 +88,21 @@ void debugging(){
       Serial.print(" - Pitch: ");
       Serial.print(pitch);
 
-      Serial.print(" - pwm 1: ");
+      Serial.print(" - pwm RL: ");
       Serial.print(pwm_1);
 
-      Serial.print(" - pwm 2: ");
+      Serial.print(" - pwm FL: ");
       Serial.print(pwm_2);
 
-      Serial.print(" - pwm 3: ");
+      Serial.print(" - pwm RR: ");
       Serial.print(pwm_3);
 
-      Serial.print(" - pwm 4: ");
+      Serial.print(" - pwm FR: ");
       Serial.print(pwm_4);
+
+      Serial.print(" - throttle: ");
+      Serial.print(throttle);
+
 
       Serial.print("\n");
     }
@@ -372,6 +376,7 @@ void flight_controller(){
 
   //----------------------------------------------------------- PITCH CONTROLLER
   error_pitch = desired_pitch - pitch;
+  throttle = rec_input_ch_3;
 
   // Proportional:
   pitch_pid_p = pitch_k_p * error_pitch;
@@ -386,7 +391,7 @@ void flight_controller(){
   }
 
   // Derivative:
-  // Take the derivative of the process variable (ROLL) instead of the error
+  // Take the derivative of the process variable (PITCH) instead of the error
   // Taking derivative of the error results in "Derivative Kick".
   // https://www.youtube.com/watch?v=KErYuh4VDtI
   pitch_pid_d = (-1.0f) * pitch_k_d * ((pitch - pitch_previous) / sample_time);
@@ -428,7 +433,7 @@ void flight_controller(){
 
   //----------------------------------------------------- MOTOR MIXING ALGORITHM
 
-  pwm_1 = throttle + pid_pitch + pid_roll; // Rear :eft
+  pwm_1 = throttle + pid_pitch + pid_roll; // Rear Left
   pwm_2 = throttle - pid_pitch + pid_roll; // Front Left
   pwm_3 = throttle + pid_pitch - pid_roll; // Rear Right
   pwm_4 = throttle - pid_pitch - pid_roll; // Front Right
@@ -446,13 +451,17 @@ void flight_controller(){
   if (pwm_4 >= 1850) pwm_4 = 1850;
   if (pwm_4 <= 1050) pwm_4 = 1050;
 
-  // Set values for next cycle:
+  //------------------------------------------------------------ WRITE TO MOTORS
+  // motor_fr.write(pwm_4);
+  // motor_fl.write(pwm_2);
+  // motor_rr.write(pwm_3);
+  // motor_rl.write(pwm_1);
+
+  //-------------------------------------------------- SET VALUES FOR NEXT CYCLE
   error_pitch_previous = error_pitch;
   pitch_previous = pitch;
   error_roll_previous = error_roll;
   roll_previous = roll;
-
-  // Write to motors
 
 }
 
@@ -546,14 +555,16 @@ void loop(){
   calculate_attitude();
   flight_controller();
 
+  debug_loopTime();
   // DEBUGGING
-  debugging();
+  //debugging();
 
   // REFRESH RATE
   //int scan_time = micros() - elapsed_time;
-  while (micros() - elapsed_time < 4000){};
-  // if (scan_time > 3850){
-  //   Serial.print("\n ------- ERROR: SCAN TIME EXCEEDED ------- \n");
-  //   while (1);
-  // }
+  while (micros() - elapsed_time < 2500){};
+
+  if (micros() - elapsed_time > 2530){
+    Serial.print("\n ------- ERROR: SCAN TIME EXCEEDED ------- \n");
+    while (1);
+  }
 }
