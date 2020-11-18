@@ -6,15 +6,10 @@
 unsigned long elapsed_time;
 float sample_time;
 unsigned long last_time_print;
-/*--- Propeller Servos -------------------------------------------------------*/
-
-double throttle = 1500;
-int button_state = 0;
-int previous_time_pressed;
-bool start_motors = false;
+double throttle = 1020;
 
 //--- Simple Moving Average Globals ------------------------------------------*/
-const int sma_samples = 15;
+const int sma_samples = 615;
 int a_x_readings[sma_samples];
 int a_y_readings[sma_samples];
 int a_z_readings[sma_samples];
@@ -376,7 +371,6 @@ void flight_controller(){
 
   //----------------------------------------------------------- PITCH CONTROLLER
   error_pitch = desired_pitch - pitch;
-  throttle = rec_input_ch_3;
 
   // Proportional:
   pitch_pid_p = pitch_k_p * error_pitch;
@@ -433,29 +427,32 @@ void flight_controller(){
 
   //----------------------------------------------------- MOTOR MIXING ALGORITHM
 
-  pwm_1 = throttle + pid_pitch + pid_roll; // Rear Left
-  pwm_2 = throttle - pid_pitch + pid_roll; // Front Left
-  pwm_3 = throttle + pid_pitch - pid_roll; // Rear Right
-  pwm_4 = throttle - pid_pitch - pid_roll; // Front Right
+  pwm_4 = throttle + pid_pitch + pid_roll; // Rear Left       pwm_4
+  pwm_2 = throttle - pid_pitch + pid_roll; // Front Left      pwm_2
+  pwm_3 = throttle + pid_pitch - pid_roll; // Rear Right      pwm_3
+  pwm_1 = throttle - pid_pitch - pid_roll; // Front Right     pwm_1
+
+  int upper_bound = 1850;
+  int lower_bound = 1010;
 
   // Clamp PWM Values:
-  if (pwm_1 >= 1850) pwm_1 = 1850;
-  if (pwm_1 <= 1050) pwm_1 = 1050;
+  if (pwm_1 >= upper_bound) pwm_1 = upper_bound;
+  if (pwm_1 <= lower_bound) pwm_1 = lower_bound;
 
-  if (pwm_2 >= 1850) pwm_2 = 1850;
-  if (pwm_2 <= 1050) pwm_2 = 1050;
+  if (pwm_2 >= upper_bound) pwm_2 = upper_bound;
+  if (pwm_2 <= lower_bound) pwm_2 = lower_bound;
 
-  if (pwm_3 >= 1850) pwm_3 = 1850;
-  if (pwm_3 <= 1050) pwm_3 = 1050;
+  if (pwm_3 >= upper_bound) pwm_3 = upper_bound;
+  if (pwm_3 <= lower_bound) pwm_3 = lower_bound;
 
-  if (pwm_4 >= 1850) pwm_4 = 1850;
-  if (pwm_4 <= 1050) pwm_4 = 1050;
+  if (pwm_4 >= upper_bound) pwm_4 = upper_bound;
+  if (pwm_4 <= lower_bound) pwm_4 = lower_bound;
 
   //------------------------------------------------------------ WRITE TO MOTORS
-  // motor_fr.write(pwm_4);
-  // motor_fl.write(pwm_2);
-  // motor_rr.write(pwm_3);
-  // motor_rl.write(pwm_1);
+  motor_fr.write(pwm_1);  // pwm_1
+  motor_fl.write(pwm_2);  // pwm_2
+  motor_rr.write(pwm_3);  // pwm_3
+  motor_rl.write(pwm_4);  // pwm_4
 
   //-------------------------------------------------- SET VALUES FOR NEXT CYCLE
   error_pitch_previous = error_pitch;
@@ -507,6 +504,10 @@ void radio_reciever_input() {
     rec_input_ch_4 = micros() - rec_input_ch_4_timer;
   }
 
+  throttle = rec_input_ch_3;
+  desired_roll = map(rec_input_ch_1, 1000, 2000, -30.0f, 30.0f);
+  desired_pitch = map(rec_input_ch_2, 1000, 2000, -30.0f, 30.0f);
+
 }
 
 void radio_setup(){
@@ -555,16 +556,15 @@ void loop(){
   calculate_attitude();
   flight_controller();
 
-  debug_loopTime();
   // DEBUGGING
-  //debugging();
+  debugging();
+  //debug_loopTime();
 
   // REFRESH RATE
-  //int scan_time = micros() - elapsed_time;
-  while (micros() - elapsed_time < 2500){};
+  while (micros() - elapsed_time < 4000){};
 
-  if (micros() - elapsed_time > 2530){
-    Serial.print("\n ------- ERROR: SCAN TIME EXCEEDED ------- \n");
-    while (1);
-  }
+  // if (micros() - elapsed_time > 2530){
+  //   Serial.print("\n ------- ERROR: SCAN TIME EXCEEDED ------- \n");
+  //   while (1);
+  // }
 }
