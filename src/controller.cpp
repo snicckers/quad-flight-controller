@@ -33,23 +33,31 @@ float q_3 = 0.0f;
 float correction_gain = 0.1f;
 
 /*--- Controller Globals -----------------------------------------------------*/
-float pid_roll, pid_pitch;
+float pid_roll, pid_pitch, pid_yaw;
 float pwm_1, pwm_2, pwm_3, pwm_4;
-float error_roll, error_pitch;
-float error_roll_previous, error_pitch_previous;
-float roll_previous, pitch_previous;
+float error_roll, error_pitch, error_yaw;
+float error_roll_previous, error_pitch_previous, error_yaw_previous;
+float roll_previous, pitch_previous, yaw_previous;
 
 float roll_pid_p = 0, roll_pid_i = 0, roll_pid_d = 0;
-float roll_k_p = 3.78f;
-float roll_k_i = 0.01f;
-float roll_k_d = 0.70f;
+float roll_k_p = 0.00f;
+float roll_k_i = 0.00f;
+float roll_k_d = 0.00f;
+int roll_max = 450;
 
 float pitch_pid_p = 0, pitch_pid_i = 0, pitch_pid_d = 0;
-float pitch_k_p = 3.78f;
-float pitch_k_i = 0.01f;
-float pitch_k_d = 0.70f;
+float pitch_k_p = roll_k_p;
+float pitch_k_i = roll_k_i;
+float pitch_k_d = roll_k_d;
+int pitch_max = roll_max;
 
-float desired_roll = 0.0f, desired_pitch = 0.0f;
+float yaw_pid_p = 0, yaw_pid_i = 0, yaw_pid_d = 0;
+float yaw_k_p = 0.0f;
+float yaw_k_i = 0.0f;
+float yaw_k_d = 0.0f;
+int yaw_max = 100;
+
+float desired_roll = 0.0f, desired_pitch = 0.0f, desired_yaw = 0.0f;
 
 /*--- Radio Globals ----------------------------------------------------------*/
 const int rec_input_1_pin = 22;
@@ -394,8 +402,8 @@ void flight_controller(){
   pid_pitch = pitch_pid_p + pitch_pid_i + pitch_pid_d;
 
   /* Clamp the maximum & minimum pid values*/
-  if (pid_pitch < -1000) pid_pitch = -1000;
-  if (pid_pitch > 1000) pid_pitch = 1000;
+  if (pid_pitch < -pitch_max) pid_pitch = -pitch_max;
+  if (pid_pitch > pitch_max) pid_pitch = pitch_max;
 
   //------------------------------------------------------------ ROLL CONTROLLER
   error_roll = desired_roll - roll;
@@ -422,15 +430,43 @@ void flight_controller(){
   pid_roll = roll_pid_p + roll_pid_i + roll_pid_d;
 
   /* Clamp the maximum & minimum pid values*/
-  if (pid_roll < -1000) pid_roll = -1000;
-  if (pid_roll > 1000) pid_roll = 1000;
+  if (pid_roll < -roll_max) pid_roll = -roll_max;
+  if (pid_roll > roll_max) pid_roll = roll_max;
+
+  //------------------------------------------------------------- YAW CONTROLLER
+  error_yaw = desired_yaw - yaw;
+
+  // Proportional:
+  yaw_pid_p = yaw_k_p * error_yaw;
+
+  // Integral:
+  //thresh = 8;
+  if (error_yaw < thresh && error_yaw > -thresh) {
+    yaw_pid_i = yaw_pid_i * (yaw_k_i * error_yaw);
+  }
+  if (error_yaw > thresh && error_yaw < -thresh){
+    yaw_pid_i = 0;
+  }
+
+  // Derivative:
+  // Take the derivative of the process variable (ROLL) instead of the error
+  // Taking derivative of the error results in "Derivative Kick".
+  // https://www.youtube.com/watch?v=KErYuh4VDtI
+  yaw_pid_d = (-1.0f) * yaw_k_d * ((yaw - yaw_previous) / sample_time);
+
+  // Altogether:
+  pid_yaw = yaw_pid_p + yaw_pid_i + yaw_pid_d;
+
+  /* Clamp the maximum & minimum pid values*/
+  if (pid_yaw < -yaw_max) pid_yaw = -yaw_max;
+  if (pid_yaw > yaw_max) pid_yaw = yaw_max;
 
   //----------------------------------------------------- MOTOR MIXING ALGORITHM
 
-  pwm_4 = throttle + pid_pitch + pid_roll; // Rear Left       pwm_4
-  pwm_2 = throttle - pid_pitch + pid_roll; // Front Left      pwm_2
-  pwm_3 = throttle + pid_pitch - pid_roll; // Rear Right      pwm_3
-  pwm_1 = throttle - pid_pitch - pid_roll; // Front Right     pwm_1
+  pwm_4 = throttle + pid_pitch + pid_roll + pid_yaw; // Rear Left       pwm_4
+  pwm_2 = throttle - pid_pitch + pid_roll - pid_yaw; // Front Left      pwm_2
+  pwm_3 = throttle + pid_pitch - pid_roll - pid_yaw; // Rear Right      pwm_3
+  pwm_1 = throttle - pid_pitch - pid_roll + pid_yaw; // Front Right     pwm_1
 
   int upper_bound = 1850;
   int lower_bound = 1010;
@@ -459,7 +495,8 @@ void flight_controller(){
   pitch_previous = pitch;
   error_roll_previous = error_roll;
   roll_previous = roll;
-
+  error_yaw_previous = error_yaw;
+  yaw_previous = yaw;
 }
 
 /*--- ISRs -------------------------------------------------------------------*/
