@@ -40,9 +40,9 @@ float error_roll_previous, error_pitch_previous, error_yaw_previous;
 float roll_previous, pitch_previous, yaw_previous;
 
 float roll_pid_p = 0, roll_pid_i = 0, roll_pid_d = 0;
-float roll_k_p = 0.00f;
-float roll_k_i = 0.00f;
-float roll_k_d = 0.00f;
+float roll_k_p = 0.0f;
+float roll_k_i = 0.0f;
+float roll_k_d = 0.33f;
 int roll_max = 450;
 
 float pitch_pid_p = 0, pitch_pid_i = 0, pitch_pid_d = 0;
@@ -52,8 +52,8 @@ float pitch_k_d = roll_k_d;
 int pitch_max = roll_max;
 
 float yaw_pid_p = 0, yaw_pid_i = 0, yaw_pid_d = 0;
-float yaw_k_p = 0.0f;
-float yaw_k_i = 0.0f;
+float yaw_k_p = 0.1f;
+float yaw_k_i = 0.002f;
 float yaw_k_d = 0.0f;
 int yaw_max = 100;
 
@@ -333,8 +333,8 @@ void calculate_attitude(){
   normalize = invSqrt(q_0*q_0 + q_1*q_1 + q_2*q_2 + q_3*q_3);
   q_0 *= normalize; q_1 *= normalize; q_2 *= normalize; q_3 *= normalize;
 
-  roll = atan2f(2*(q_0*q_1 + q_2*q_3), 1.0f - 2.0f*(q_1*q_1 + q_2*q_2)) * rad_to_degrees + 0.0f;
-  pitch = asinf(2.0f * (q_0*q_2 - q_1*q_3)) * rad_to_degrees + 2.0f;
+  roll = atan2f(2*(q_0*q_1 + q_2*q_3), 1.0f - 2.0f*(q_1*q_1 + q_2*q_2)) * rad_to_degrees + 0.8f;
+  pitch = asinf(2.0f * (q_0*q_2 - q_1*q_3)) * rad_to_degrees - 2.3f;
   yaw = atan2f(2*(q_0*q_3 + q_1*q_2), 1.0f - 2.0f*(q_2*q_2 + q_3*q_3)) * rad_to_degrees;
 }
 
@@ -542,8 +542,8 @@ void radio_reciever_input() {
   }
 
   throttle = rec_input_ch_3;
-  desired_roll = map(rec_input_ch_1, 1000, 2000, -30.0f, 30.0f);
-  desired_pitch = map(rec_input_ch_2, 1000, 2000, -30.0f, 30.0f);
+  desired_roll = map(rec_input_ch_1, 1000, 2000, -15.0f, 15.0f);
+  desired_pitch = map(rec_input_ch_2, 1000, 2000, -15.0f, 15.0f);
 
 }
 
