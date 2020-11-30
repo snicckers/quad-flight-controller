@@ -9,7 +9,7 @@ unsigned long last_time_print;
 double throttle = 1020;
 
 //--- Simple Moving Average Globals ------------------------------------------*/
-const int sma_samples = 15;
+const int sma_samples = 615;
 int a_x_readings[sma_samples];
 int a_y_readings[sma_samples];
 int a_z_readings[sma_samples];
@@ -80,10 +80,10 @@ int motor_rl_out = 5; // read left
 
 /*--- Debugging --------------------------------------------------------------*/
 void debugging(){
-  int mode = 2;
+  int mode = 1;
 
   // Serial Print has a significant impact on performance. Only use it once every n scans.
-  if (elapsed_time - last_time_print > 1){
+  if (elapsed_time - last_time_print > 20000){
     if(mode == 1){  // Used to test controller tuning
       Serial.print("Roll: ");
       Serial.print(roll);
@@ -244,8 +244,7 @@ void gyro_data_processing(){
   (sensor_data)[6] -= g_drift[2];
 
   // Gyroscope Temperature Offset Calibation
-  //float mpu_t = ((float)sensor_data[3] + 12421.0f) / 340.0f;
-  float mpu_t = 25.0f;
+  float mpu_t = ((float)sensor_data[3] + 12421.0f) / 340.0f;
   float lsb_scale_offset = 0.328 * (mpu_t - 25.0f);
   lsb_coefficient = (1.0f / (32.8f - lsb_scale_offset));
 }
@@ -253,12 +252,21 @@ void gyro_data_processing(){
 /*--- CALCULATE ATTITUDE -----------------------------------------------------*/
 // Cheapest/fastest inverse square root I could find (99.94% accurate to 1 / sqrt(x))
 // Source: http://www.dbfinteractive.com/forum/index.php?topic=6269.0
-float invSqrt(float x){
-   uint32_t i = 0x5F1F1412 - (*(uint32_t*)&x >> 1);
-   float tmp = *(float*)&i;
-   return tmp * (1.69000231f - 0.714158168f * x * tmp * tmp);
-}
+float invSqrt( float number ){
+    union {
+        float f;
+        uint32_t i;
+    } conv;
 
+    float x2;
+    const float threehalfs = 1.5F;
+
+    x2 = number * 0.5F;
+    conv.f  = number;
+    conv.i  = 0x5f3759df - ( conv.i >> 1 );
+    conv.f  = conv.f * ( threehalfs - ( x2 * conv.f * conv.f ) );
+    return conv.f;
+}
 
 // Calculate attitude during runtime.
 void calculate_attitude(){
@@ -312,9 +320,6 @@ void calculate_attitude(){
   float delF_2 = _8q_2*q2_2 - _4q_2 + _4q_2*q2_3 + _4q_2*q2_0 + _8q_2*q2_1 + _2q_0*a_x - _2q_3*a_y + _4q_2*a_z;
   float delF_3 = _4q_3*q2_2 + _4q_3*q2_1 - _2q_1*a_x - _2q_2*a_y;
 
-  // normalize = invSqrt(q_0*q_0 + q_1*q_1 + q_2*q_2 + q_3*q_3);
-  // q_0 *= normalize; q_1 *= normalize; q_2 *= normalize; q_3 *= normalize;
-
   //Change correction_gain for more or less influence of accelerometer on gyro rates.
   qDot_0 -= correction_gain * delF_0;
   qDot_1 -= correction_gain * delF_1;
@@ -363,7 +368,6 @@ void calibrate_imu(){
 
     delay(3);
   }
-
   // Average drift / offset of the raw gyroscope data:
   g_drift[0] /= cal_count;
   g_drift[1] /= cal_count;
@@ -568,11 +572,11 @@ void setup_motors(){
 
 /*--- SETUP ------------------------------------------------------------------*/
 void setup() {
-  //pinMode(7, INPUT);
+  pinMode(7, INPUT);
   Serial.begin(9600);
   Wire.begin();
-  //setup_motors();
-  //radio_setup();
+  setup_motors();
+  radio_setup();
   setup_mpu();
   calibrate_imu();
 }
@@ -585,9 +589,9 @@ void loop(){
   //IMU
   read_mpu();
   gyro_data_processing();
-  //accel_data_processing();
+  accel_data_processing();
   calculate_attitude();
-  //flight_controller();
+  flight_controller();
 
   // DEBUGGING
   debugging();
