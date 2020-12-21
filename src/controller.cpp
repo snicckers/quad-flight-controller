@@ -40,7 +40,7 @@ float error_roll_previous, error_pitch_previous, error_yaw_previous;
 float roll_previous, pitch_previous, yaw_previous;
 
 float roll_pid_p = 0, roll_pid_i = 0, roll_pid_d = 0;
-float roll_k_p = 2.0f;
+float roll_k_p = 0.0f;
 float roll_k_i = 0.0f;
 float roll_k_d = 0.51f;
 int roll_max = 450;
@@ -244,8 +244,8 @@ void gyro_data_processing(){
   (sensor_data)[6] -= g_drift[2];
 
   // Gyroscope Temperature Offset Calibation
-  //float mpu_t = ((float)sensor_data[3] + 12421.0f) / 340.0f;
-  float mpu_t = 25.0f;
+  float mpu_t = ((float)sensor_data[3] + 12421.0f) / 340.0f;
+  //float mpu_t = 25.0f;
   float lsb_scale_offset = 0.328 * (mpu_t - 25.0f);
   lsb_coefficient = (1.0f / (32.8f - lsb_scale_offset));
 }
@@ -258,7 +258,6 @@ float invSqrt(float x){
    float tmp = *(float*)&i;
    return tmp * (1.69000231f - 0.714158168f * x * tmp * tmp);
 }
-
 
 // Calculate attitude during runtime.
 void calculate_attitude(){
@@ -312,8 +311,8 @@ void calculate_attitude(){
   float delF_2 = _8q_2*q2_2 - _4q_2 + _4q_2*q2_3 + _4q_2*q2_0 + _8q_2*q2_1 + _2q_0*a_x - _2q_3*a_y + _4q_2*a_z;
   float delF_3 = _4q_3*q2_2 + _4q_3*q2_1 - _2q_1*a_x - _2q_2*a_y;
 
-  // normalize = invSqrt(q_0*q_0 + q_1*q_1 + q_2*q_2 + q_3*q_3);
-  // q_0 *= normalize; q_1 *= normalize; q_2 *= normalize; q_3 *= normalize;
+  normalize = invSqrt(q_0*q_0 + q_1*q_1 + q_2*q_2 + q_3*q_3);
+  q_0 *= normalize; q_1 *= normalize; q_2 *= normalize; q_3 *= normalize;
 
   //Change correction_gain for more or less influence of accelerometer on gyro rates.
   qDot_0 -= correction_gain * delF_0;
@@ -328,8 +327,8 @@ void calculate_attitude(){
   normalize = invSqrt(q_0*q_0 + q_1*q_1 + q_2*q_2 + q_3*q_3);
   q_0 *= normalize; q_1 *= normalize; q_2 *= normalize; q_3 *= normalize;
 
-  roll = atan2f(2*(q_0*q_1 + q_2*q_3), 1.0f - 2.0f*(q_1*q_1 + q_2*q_2)) * rad_to_degrees + 0.8f;
-  pitch = asinf(2.0f * (q_0*q_2 - q_1*q_3)) * rad_to_degrees - 2.3f;
+  roll = atan2f(2*(q_0*q_1 + q_2*q_3), 1.0f - 2.0f*(q_1*q_1 + q_2*q_2)) * rad_to_degrees + 0.4f;
+  pitch = asinf(2.0f * (q_0*q_2 - q_1*q_3)) * rad_to_degrees + 1.2f;
   yaw = atan2f(2*(q_0*q_3 + q_1*q_2), 1.0f - 2.0f*(q_2*q_2 + q_3*q_3)) * rad_to_degrees;
 }
 
@@ -571,8 +570,8 @@ void setup() {
   //pinMode(7, INPUT);
   Serial.begin(9600);
   Wire.begin();
-  //setup_motors();
-  //radio_setup();
+  setup_motors();
+  radio_setup();
   setup_mpu();
   calibrate_imu();
 }
@@ -585,9 +584,9 @@ void loop(){
   //IMU
   read_mpu();
   gyro_data_processing();
-  //accel_data_processing();
+  accel_data_processing();
   calculate_attitude();
-  //flight_controller();
+  flight_controller();
 
   // DEBUGGING
   debugging();
