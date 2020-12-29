@@ -1,6 +1,9 @@
 #include <Wire.h>
 #include <stdlib.h>
 #include <Servo.h>
+#include <Arduino.h>
+
+#pragma region Globals
 
 #define ACTIVATED HIGH
 unsigned long elapsed_time;
@@ -77,6 +80,8 @@ int motor_fr_out = 2; // front right
 int motor_fl_out = 3; // front light
 int motor_rr_out = 4; // read right
 int motor_rl_out = 5; // read left
+
+#pragma endregion
 
 /*--- Debugging --------------------------------------------------------------*/
 void debugging(){
@@ -179,6 +184,7 @@ void setup_mpu(){
   // 0x68 = Registry address of mpu6050
   // 0x6B = Send starting register
   // 0x00 = Tell the MPU not to be asleep
+  
   Wire.beginTransmission(0x68);
   Wire.write(0x6B);
   Wire.write(0x00); // Wakes up the MPU6050
@@ -236,7 +242,7 @@ void accel_data_processing(){  //Simple moving average filter
   a_read_ave[2] = a_read_total[2] / sma_samples;
 }
 
-// Remove the average gyroscope drift / offset (recorded in the calibration method) from the gyroscope data that is recorded during each scan.
+// Remove the average gyroscope drift (recorded in the calibration method) from gyro data, and correct for temperature variance error.
 void gyro_data_processing(){
   // Remove drift from Gyroscope data:
   (sensor_data)[4] -= g_drift[0];
@@ -416,9 +422,6 @@ void flight_controller(){
   }
 
   // Derivative:
-  // Take the derivative of the process variable (ROLL) instead of the error
-  // Taking derivative of the error results in "Derivative Kick".
-  // https://www.youtube.com/watch?v=KErYuh4VDtI
   roll_pid_d = (-1.0f) * roll_k_d * ((roll - roll_previous) / sample_time);
 
   // Altogether:
@@ -444,9 +447,6 @@ void flight_controller(){
   }
 
   // Derivative:
-  // Take the derivative of the process variable (ROLL) instead of the error
-  // Taking derivative of the error results in "Derivative Kick".
-  // https://www.youtube.com/watch?v=KErYuh4VDtI
   yaw_pid_d = (-1.0f) * yaw_k_d * ((yaw - yaw_previous) / sample_time);
 
   // Altogether:

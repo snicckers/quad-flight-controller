@@ -1,0 +1,6 @@
+{
+    "programmer": "AVR ISP",
+    "board": "arduino:sam:arduino_due_x_dbg",
+    "sketch": "src\\controller.ino",
+    "port": "COM4"
+}
