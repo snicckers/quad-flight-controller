@@ -55,7 +55,7 @@ float pitch_k_d = roll_k_d;
 int pitch_max = roll_max;
 
 float yaw_pid_p = 0, yaw_pid_i = 0, yaw_pid_d = 0;
-float yaw_k_p = 0.01f;
+float yaw_k_p = 0.1f;
 float yaw_k_i = 0.002f;
 float yaw_k_d = 0.0f;
 int yaw_max = 100;
@@ -244,7 +244,7 @@ void accel_data_processing(){  //Simple moving average filter
 
 // Remove the average gyroscope drift (recorded in the calibration method) from gyro data, and correct for temperature variance error.
 void gyro_data_processing(){
-  // Remove drift from Gyroscope data:
+  // Offset drift from gyroscope data:
   (sensor_data)[4] -= g_drift[0];
   (sensor_data)[5] -= g_drift[1];
   (sensor_data)[6] -= g_drift[2];
