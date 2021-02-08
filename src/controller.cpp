@@ -43,7 +43,7 @@ float error_roll_previous, error_pitch_previous, error_yaw_previous;
 float roll_previous, pitch_previous, yaw_previous;
 
 float roll_pid_p = 0, roll_pid_i = 0, roll_pid_d = 0;
-float roll_k_p = 0.0f;
+float roll_k_p = 0.2f;
 float roll_k_i = 0.0f;
 float roll_k_d = 0.51f;
 int roll_max = 450;
@@ -55,7 +55,7 @@ float pitch_k_d = roll_k_d;
 int pitch_max = roll_max;
 
 float yaw_pid_p = 0, yaw_pid_i = 0, yaw_pid_d = 0;
-float yaw_k_p = 0.1f;
+float yaw_k_p = 0.05f;
 float yaw_k_i = 0.002f;
 float yaw_k_d = 0.0f;
 int yaw_max = 100;
@@ -63,10 +63,11 @@ int yaw_max = 100;
 float desired_roll = 0.0f, desired_pitch = 0.0f, desired_yaw = 0.0f;
 
 /*--- Radio Globals ----------------------------------------------------------*/
-const int rec_input_1_pin = 22;
-const int rec_input_2_pin = 23;
+// I/O:
+const int rec_input_1_pin = 22; // roll
+const int rec_input_2_pin = 23; // pitch
 const int rec_input_3_pin = 24; // throttle
-const int rec_input_4_pin = 25;
+const int rec_input_4_pin = 25; // yaw
 
 // Radio Reciever
 volatile int rec_input_ch_1, rec_input_ch_1_timer, rec_last_ch_1;
@@ -85,7 +86,7 @@ int motor_rl_out = 5; // read left
 
 /*--- Debugging --------------------------------------------------------------*/
 void debugging(){
-  int mode = 2;
+  int mode = 1;
 
   // Serial Print has a significant impact on performance. Only use it once every n scans.
   if (elapsed_time - last_time_print > 1){
@@ -492,6 +493,23 @@ void flight_controller(){
   roll_previous = roll;
   error_yaw_previous = error_yaw;
   yaw_previous = yaw;
+}
+
+void clamp_deltaMotorOutput(){
+  // What am I clamping
+  // * radio signal?
+  // * pid control signal?
+  // * motor output signal? Yes clamp this one
+  /* If the change in motor speed output is too high in too short a prediod of time, turn off all motors.
+     This is a safety feature only, to prevent you from taking a chunk of flesh out of your arm/foot again.
+     
+     What am I gonna need?
+     * global array to record the last ~20 output samples
+     * calculate the average value for the sample set
+     * if the average value exceeds a HH setpoint, emergency stop */
+
+
+
 }
 
 /*--- ISRs -------------------------------------------------------------------*/
