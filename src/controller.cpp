@@ -554,9 +554,9 @@ void radio_reciever_input() {
     rec_input_ch_4 = micros() - rec_input_ch_4_timer;
   }
 
-  throttle = rec_input_ch_3;
-  desired_roll = map(rec_input_ch_1, 1000, 2000, -15.0f, 15.0f);
-  desired_pitch = map(rec_input_ch_2, 1000, 2000, -15.0f, 15.0f);
+  throttle = rec_input_ch_1;
+  desired_roll = map(rec_input_ch_2, 1000, 2000, -15.0f, 15.0f);
+  desired_pitch = map(rec_input_ch_3, 1000, 2000, -15.0f, 15.0f);
 
 }
 
@@ -586,7 +586,7 @@ void setup_motors(){
 /*--- SETUP ------------------------------------------------------------------*/
 void setup() {
   //pinMode(7, INPUT);
-  Serial.begin(9600);
+  Serial.begin(115200);
   Wire.begin();
   setup_motors();
   radio_setup();
