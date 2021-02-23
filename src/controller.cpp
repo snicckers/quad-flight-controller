@@ -43,9 +43,9 @@ float error_roll_previous, error_pitch_previous, error_yaw_previous;
 float roll_previous, pitch_previous, yaw_previous;
 
 float roll_pid_p = 0, roll_pid_i = 0, roll_pid_d = 0;
-float roll_k_p = 0.2f;
+float roll_k_p = 5.0f;
 float roll_k_i = 0.0f;
-float roll_k_d = 0.51f;
+float roll_k_d = 0.00f;
 int roll_max = 450;
 
 float pitch_pid_p = 0, pitch_pid_i = 0, pitch_pid_d = 0;
@@ -161,6 +161,25 @@ void debugging(){
       Serial.print(rec_input_ch_3);
       Serial.print(" ");
       Serial.print(rec_input_ch_4);
+      Serial.print(" ");
+      Serial.print(desired_pitch);
+      Serial.print(" ");
+      Serial.print(desired_roll);
+      Serial.print("\n");
+    }
+
+    if(mode == 6){
+      Serial.print(pid_pitch);
+      Serial.print(" ");
+      Serial.print(pid_roll);
+      Serial.print(" ");
+      Serial.print(pid_yaw);
+      Serial.print(" ");
+      Serial.print(" ");
+      Serial.print(" ");
+      Serial.print(desired_pitch);
+      Serial.print(" ");
+      Serial.print(desired_roll);
       Serial.print("\n");
     }
 
@@ -427,6 +446,7 @@ void flight_controller(){
 
   // Altogether:
   pid_roll = roll_pid_p + roll_pid_i + roll_pid_d;
+  //pid_yaw = nicksMap(pid_yaw, 0.0f, 90.0f, -1000, 1000);
 
   /* Clamp the maximum & minimum pid values*/
   if (pid_roll < -roll_max) pid_roll = -roll_max;
@@ -452,6 +472,7 @@ void flight_controller(){
 
   // Altogether:
   pid_yaw = yaw_pid_p + yaw_pid_i + yaw_pid_d;
+  //pid_yaw = nicksMap(pid_yaw, 0.0f, 90.0f, -1000, 1000);
 
   /* Clamp the maximum & minimum pid values*/
   if (pid_yaw < -yaw_max) pid_yaw = -yaw_max;
@@ -513,6 +534,10 @@ void clamp_deltaMotorOutput(){
 }
 
 /*--- ISRs -------------------------------------------------------------------*/
+float nicksMap(float x, float in_min, float in_max, float out_min, float out_max){
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 void radio_reciever_input() {
   // Channel 1: Roll
   if (rec_last_ch_1 == 0 && digitalRead(rec_input_1_pin)){
@@ -554,10 +579,11 @@ void radio_reciever_input() {
     rec_input_ch_4 = micros() - rec_input_ch_4_timer;
   }
 
+  float rotate_range = 15.0f;
   throttle = rec_input_ch_1;
-  desired_roll = map(rec_input_ch_2, 1000, 2000, -15.0f, 15.0f);
-  desired_pitch = map(rec_input_ch_3, 1000, 2000, -15.0f, 15.0f);
-
+  desired_roll = nicksMap(rec_input_ch_3, 1000, 2000, -rotate_range, rotate_range);
+  desired_pitch = nicksMap(rec_input_ch_2, 1000, 2000, -rotate_range, rotate_range);
+  // desired_yaw = nicksMap(rec_input_ch_4, 1000, 2000, )
 }
 
 void radio_setup(){
