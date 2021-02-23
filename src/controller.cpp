@@ -633,7 +633,7 @@ void loop(){
   flight_controller();
 
   // DEBUGGING
-  debugging();
+  //debugging();
   //debug_loopTime();
 
   // REFRESH RATE
