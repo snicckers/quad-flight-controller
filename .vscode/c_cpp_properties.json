@@ -8,10 +8,10 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "c:/Users/Nick/Documents/GitHub/quad-flight-controller/include",
-                "c:/Users/Nick/Documents/GitHub/quad-flight-controller/src",
+                "C:/Users/Nick/Documents/GitHub/quad-flight-controller/include",
+                "C:/Users/Nick/Documents/GitHub/quad-flight-controller/src",
                 "C:/Users/Nick/.platformio/packages/framework-arduino-sam/libraries/Wire/src",
-                "c:/Users/Nick/Documents/GitHub/quad-flight-controller/lib/Servo/src",
+                "C:/Users/Nick/Documents/GitHub/quad-flight-controller/lib/Servo/src",
                 "C:/Users/Nick/.platformio/packages/framework-arduino-sam/cores/arduino",
                 "C:/Users/Nick/.platformio/packages/framework-arduino-sam/system/libsam",
                 "C:/Users/Nick/.platformio/packages/framework-arduino-sam/system/CMSIS/CMSIS/Include",
@@ -25,10 +25,10 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "c:/Users/Nick/Documents/GitHub/quad-flight-controller/include",
-                    "c:/Users/Nick/Documents/GitHub/quad-flight-controller/src",
+                    "C:/Users/Nick/Documents/GitHub/quad-flight-controller/include",
+                    "C:/Users/Nick/Documents/GitHub/quad-flight-controller/src",
                     "C:/Users/Nick/.platformio/packages/framework-arduino-sam/libraries/Wire/src",
-                    "c:/Users/Nick/Documents/GitHub/quad-flight-controller/lib/Servo/src",
+                    "C:/Users/Nick/Documents/GitHub/quad-flight-controller/lib/Servo/src",
                     "C:/Users/Nick/.platformio/packages/framework-arduino-sam/cores/arduino",
                     "C:/Users/Nick/.platformio/packages/framework-arduino-sam/system/libsam",
                     "C:/Users/Nick/.platformio/packages/framework-arduino-sam/system/CMSIS/CMSIS/Include",

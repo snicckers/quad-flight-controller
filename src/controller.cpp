@@ -43,9 +43,9 @@ float error_roll_previous, error_pitch_previous, error_yaw_previous;
 float roll_previous, pitch_previous, yaw_previous;
 
 float roll_pid_p = 0, roll_pid_i = 0, roll_pid_d = 0;
-float roll_k_p = 5.0f;
+float roll_k_p = 1.2f;
 float roll_k_i = 0.0f;
-float roll_k_d = 0.00f;
+float roll_k_d = 0.8f;
 int roll_max = 450;
 
 float pitch_pid_p = 0, pitch_pid_i = 0, pitch_pid_d = 0;
@@ -633,7 +633,7 @@ void loop(){
   flight_controller();
 
   // DEBUGGING
-  //debugging();
+  debugging();
   //debug_loopTime();
 
   // REFRESH RATE
